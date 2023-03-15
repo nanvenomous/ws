@@ -5,35 +5,98 @@ package cmd
 
 import (
 	"fmt"
+	"io/ioutil"
+	"os"
+	"strings"
 
+	"github.com/nanvenomous/ws/system"
 	"github.com/spf13/cobra"
 )
 
-// updateCmd represents the update command
+var (
+	syncFlByts       []byte
+	syncFlString     string
+	updateCheckFlag  bool
+	updateBranchFlag string
+)
+
+func updateDependencies(deps []string) error {
+	var err error
+	for _, dep := range deps {
+		err = FS.Execute("go", []string{"get", "-u", dep + "@" + updateBranchFlag})
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func fileContains(flToCheck string, toFnd string) (bool, error) {
+	var (
+		err error
+	)
+	syncFlByts, err = ioutil.ReadFile(flToCheck)
+	if err != nil {
+		return false, err
+	}
+	syncFlString = string(syncFlByts)
+	if strings.Contains(syncFlString, toFnd) {
+		return true, nil
+	}
+	return false, nil
+}
+
+func runUpdateCmd() error {
+	var (
+		err    error
+		hasDep bool
+		deps   []string
+	)
+	for _, curWf := range CFG.Modules() {
+		err = os.Chdir(curWf.Path)
+		if err != nil {
+			return err
+		}
+		deps = []string{}
+		for _, checkWf := range CFG.Modules() {
+			if curWf.Path != checkWf.Path {
+				hasDep, err = fileContains("go.mod", checkWf.ModulePath)
+				if err != nil {
+					return err
+				}
+				if hasDep {
+					deps = append(deps, checkWf.ModulePath)
+				}
+			}
+		}
+		if updateCheckFlag {
+			fmt.Println(curWf.Path, deps)
+		} else {
+			fmt.Println("[UPDATING]", curWf.Path)
+			err = updateDependencies(deps)
+			if err != nil {
+				return err
+			}
+		}
+		err = os.Chdir("..")
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 var updateCmd = &cobra.Command{
 	Use:   "update",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
-	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("update called")
+	Short: "updates all dependencies included in work file",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return runUpdateCmd()
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(updateCmd)
-
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// updateCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// updateCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	system.CheckFlag(updateCmd, &updateCheckFlag, "c")
+	system.BranchFlag(updateCmd, &updateBranchFlag, "b")
 }
