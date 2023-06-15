@@ -14,16 +14,15 @@ import (
 )
 
 var (
-	syncFlByts       []byte
-	syncFlString     string
-	updateCheckFlag  bool
-	updateBranchFlag string
+	syncFlByts      []byte
+	syncFlString    string
+	updateCheckFlag bool
 )
 
 func updateDependencies(deps []string) error {
 	var err error
 	for _, dep := range deps {
-		err = FS.Execute("go", []string{"get", "-u", dep + "@" + updateBranchFlag})
+		err = FS.Execute("go", []string{"get", "-u", dep + "@" + system.Branch})
 		if err != nil {
 			return err
 		}
@@ -98,5 +97,5 @@ var updateCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(updateCmd)
 	system.CheckFlag(updateCmd, &updateCheckFlag, "c")
-	system.BranchFlag(updateCmd, &updateBranchFlag, "b")
+	system.BranchFlag(updateCmd, "b")
 }

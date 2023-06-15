@@ -24,7 +24,7 @@ var (
 
 var rootCmd = &cobra.Command{
 	Use:   PKG_NAME,
-	Short: "an opinionated meta repo tool for working with go workspaces and git subtree",
+	Short: "a meta repo tool for working specifically with go workspaces and git subtree",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		snek.RunShellCompletion(cmd)
 		return cmd.Help()
@@ -41,5 +41,4 @@ func init() {
 	snek.InitRoot(rootCmd, cfgFile, PKG_NAME)
 	FS = exfs.NewFileSystem()
 	CFG = configuration.NewConfiguration(FS)
-	// rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }
